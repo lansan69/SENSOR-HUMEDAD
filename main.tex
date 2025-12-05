@@ -1,0 +1,242 @@
+\documentclass[a4paper,11pt]{article}
+\usepackage[utf8]{inputenc}
+\input{libraries.tex}
+
+\geometry{margin=1in}
+
+\lhead{\footnotesize EQUIPO MESA 1 }
+\rhead{\footnotesize 5CV3} 
+\cfoot{\footnotesize \thepage}
+\pagestyle{fancy}
+
+\setlength{\parindent}{0in}
+
+\begin{document}
+
+% --------------------- PORTADA ---------------------
+\begin{titlepage}
+    \centering
+    {\bfseries\LARGE Escuela Superior de Cómputo \\[1cm]}
+    {\scshape\Large \MakeUppercase{INSTRUMENTACIón Y CONTROL} \\[5cm]}
+    {\scshape\Huge \textbf{Proyecto final de la materia:} \\[0.5cm]}
+    {\scshape\Huge SENSOR DE HUMEDAD \\[2cm]}
+    {\Large \textbf{Integrantes del equipo:} \par}
+    {\Large Merino Estévez Abraham Osmar \par}
+    {\Large Resendiz Rios Diego Emiliano \par}
+    {\Large Sánchez Gómez Alan Iván \par}
+    \vfill
+    {\Large \textbf{Grupo: 5CV4} \\[2cm]}
+    \vfill
+    {\Large \today}
+\end{titlepage}
+
+\tableofcontents
+\newpage
+
+\listoffigures
+\newpage
+
+\justify
+
+% --------------------- INTRODUCCIÓN ---------------------
+\section{Introducción teórica}
+% Aquí va la descripción general del proyecto, motivación, contexto y propósito.
+
+% =======================================================
+% DESARROLLO
+% =======================================================
+
+\section{Desarrollo}
+
+\subsection{Planteamiento del proyecto}
+Para desarrollar el prototipo se definieron algunos criterios básicos que ayudan a orientar el diseño del sistema. Primero, necesitamos que la señal del sensor de humedad sea fácil de digitalizar con el ADC, asegurando que los valores obtenidos sean claros y útiles.
+
+También se busca mantener el circuito lo más simple posible, usando pocos componentes externos, pero sin perder funcionalidad. Por último, se intenta lograr la mayor precisión posible en la medición de la humedad, de manera que los datos obtenidos sean confiables para su análisis y visualización.
+
+\subsubsection{Criterios formalizados del diseño}
+\begin{itemize}
+    \item Se utilizará un sustractor para ajustar la señal del sensor y lograr que el voltaje de salida inicie desde 0\,V, facilitando así la digitalización en el ADC.
+    \item El voltaje máximo del sistema será de 3\,V para obtener una conversión más precisa. Para esto se usará un amplificador operacional en configuración no inversora.
+    \item El circuito operará en un rango de 0\,V a 3\,V, permitiendo alimentarlo únicamente con la fuente de 5\,V tanto para el op-amp como para las referencias internas del sustractor.
+    \item El voltaje de referencia se obtendrá mediante un divisor de voltaje conectado a la fuente de 5\,V, asegurando estabilidad y simplicidad en el diseño.
+    \item Se emplearán comparadores para reducir el efecto del ruido tanto en la señal del sensor como en el voltaje de referencia, mejorando la estabilidad de la lectura.
+    \item La conversión analógica a digital será realizada por un ADC de 8 bits, específicamente el ADC0804.
+\end{itemize}
+
+
+\subsection{Diseño del circuito}
+\subsubsection{Planteamiento de la solución}
+
+La solución propuesta se basa en acondicionar la señal del sensor de humedad para que pueda ser interpretada correctamente por el conversor analógico–digital. Para lograrlo, primero se ajusta la señal del sensor mediante un sustractor, cuyo propósito es hacer que el voltaje resultante parta desde 0\,V. Esto simplifica el proceso de digitalización y evita valores negativos que el ADC no puede manejar.
+
+Posteriormente, la señal se amplifica utilizando un amplificador operacional en configuración no inversora, de modo que el voltaje máximo del sistema quede limitado a 3\,V. Este rango fue elegido porque permite aprovechar mejor la resolución del ADC0804, al mismo tiempo que posibilita alimentar todo el circuito con una sola fuente de 5\,V.
+
+Para generar el voltaje de referencia necesario en el sustractor y otros puntos del circuito, se emplea un divisor de voltaje conectado directamente a la fuente de 5\,V. Además, se incorporan comparadores que ayudan a disminuir el efecto del ruido tanto en la señal del sensor como en la referencia, obteniendo así mediciones más estables.
+
+Finalmente, la señal ya acondicionada se envía al ADC0804, un conversor de 8 bits que transforma el voltaje en un valor digital. Este valor puede ser utilizado posteriormente para su visualización, análisis o envío a una interfaz web.
+
+
+\subsubsection{Cálculos}
+
+\subsubsection*{1. Etapa de Acondicionamiento (Offset)}
+El sensor HMZ-433A1 presenta un rango de salida $V_{\text{sensor}} \in [0.66, 2.97]\,\text{V}$. Se implementa un sustractor con ganancia unitaria ($R_1 = R_2 = 10\,\text{k}\Omega$) para eliminar el offset de $0.66\,\text{V}$.
+
+\noindent\textbf{Voltaje de referencia ($V_{\text{ref}}$):}
+Se obtiene mediante un divisor de voltaje ($V_{cc}=5\,\text{V}$) con $R_3 = 1\,\text{k}\Omega$ y $R_4 = 6.5\,\text{k}\Omega$:
+\begin{equation*}
+    V_{\text{ref}} = 5\,\text{V} \cdot \frac{R_3}{R_3 + R_4} = 5 \cdot \frac{1}{7.5} \approx 0.66\,\text{V}
+\end{equation*}
+
+\noindent\textbf{Salida del sustractor:}
+\begin{align*}
+    V_{\text{sub}} &= V_{\text{sensor}} - V_{\text{ref}} \\
+    V_{\text{sub,min}} &= 0.66\,\text{V} - 0.66\,\text{V} = 0\,\text{V} \\
+    V_{\text{sub,max}} &= 2.97\,\text{V} - 0.66\,\text{V} = 2.31\,\text{V}
+\end{align*}
+
+\subsubsection*{2. Etapa de Amplificación (Escalamiento)}
+Para ajustar el rango $0 \to 2.31\,\text{V}$ al objetivo de $\approx 3\,\text{V}$, se utiliza un amplificador no inversor.
+
+\noindent\textbf{Ganancia requerida y componentes:}
+Se seleccionan $R_f = 2\,\text{k}\Omega$ y $R_g = 6.8\,\text{k}\Omega$:
+\begin{equation*}
+    G = 1 + \frac{R_f}{R_g} = 1 + \frac{2k\Omega}{6.8k\Omega} \approx 1.294
+\end{equation*}
+
+\noindent\textbf{Rango final de salida:}
+\begin{align*}
+    V_{\text{out,max}} &= 2.31\,\text{V} \times 1.294 \approx 2.99\,\text{V} \\[5pt]
+    \therefore \quad V_{\text{out}} &\in [0, 2.99]\,\text{V}
+\end{align*}
+
+
+\subsubsection{Diseño final del circuito}
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=1\linewidth]{images/design.png}
+    \caption{Diseño final del circuito}
+    \label{fig:design}
+\end{figure}
+
+\subsection{Simulación del sistema}
+% Aquí va:
+% - Resultados de simulaciones del op-amp
+% - Pruebas del divisor de voltaje
+% - Simulación del comportamiento general del sistema
+% - Capturas de las simulaciones
+
+\subsection{Implementación física}
+\subsubsection{Materiales utilizados}
+
+Para el desarrollo del prototipo se emplearon los siguientes componentes, seleccionados por su disponibilidad y funcionalidad en la digitalización y acondicionamiento de señales del sensor HMZ-433A1:
+
+\begin{itemize}
+    \item \textbf{ADC0804:} Convertidor analógico-digital para el Arduino.
+    \item \textbf{LM324N:} Amplificador operacional de 14 pines para acondicionar señales.
+    \item \textbf{Resistencias (10k, 2k, 1k, 6.8k):} Para divisores de voltaje y limitación de corriente.
+    \item \textbf{Potenciómetros 10k (x2):} Ajuste de ganancia y calibración de señal.
+    \item \textbf{Sensor HMZ-433A1:} Mide la variable de interés y entrega señal analógica.
+    \item \textbf{Protoboard:} Para conexiones temporales y pruebas.
+    \item \textbf{Arduino Uno:} Microcontrolador para adquisición y procesamiento de datos.
+    \item \textbf{Capacitores (0.1µF x2, 150pF, 10µF):} Filtrado y estabilización de señales.
+    \item \textbf{Push button:} Control manual de lecturas.
+\end{itemize}
+
+\subsubsection{Prototipo físico}
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=1\linewidth]{images/proto.png}
+    \caption{Prototipo físico del proyecto}
+    \label{fig:prototipo}
+\end{figure}
+% Aquí va:
+% - Fotografías del prototipo
+% - Descripción del armado en protoboard
+% - Ajustes realizados respecto al diseño original
+% - Problemas detectados y soluciones
+
+\subsection{Interfaz web y digitalización}
+% Aquí va:
+% - Arquitectura software (diagrama si aplica)
+% - Cómo se envían los datos del ADC a la web
+% - Diseño de la interfaz web (capturas)
+% - Lenguajes, librerías o frameworks utilizados
+
+\subsection{Pruebas y resultados}
+\subsubsection{Resultados esperados}
+\begin{table}[h!]
+\centering
+\begin{tabular}{|c|c|c|}
+\hline
+\textbf{Vsensor (V)} & \textbf{Vacondicionado (V)} & \textbf{Humedad (\%)} \\
+\hline
+1.50 & 1.122 & 45.45 \\
+1.61 & 1.253 & 48.79 \\
+1.72 & 1.384 & 52.12 \\
+1.81 & 1.513 & 54.79 \\
+1.96 & 1.69  & 59.39 \\
+2.12 & 1.916 & 64.18 \\
+2.24 & 2.046 & 67.88 \\
+2.39 & 2.309 & 72.58 \\
+2.48 & 2.336 & 75.15 \\
+2.60 & 2.558 & 78.79 \\
+2.75 & 2.863 & 83.33 \\
+2.87 & 3.011 & 86.67 \\
+\hline
+\end{tabular}
+\caption{Valores esperados calculados a partir de las fórmulas}
+\label{tab:expected_sensor}
+\end{table}
+
+\subsubsection{Resultados obtenidos}
+\begin{table}[h!]
+\centering
+\begin{tabular}{|c|c|c|}
+\hline
+\textbf{Vsensor (V)} & \textbf{Vacondicionado (V)} & \textbf{Humedad (\%)} \\
+\hline
+1.50 & 1.09 & 45.52 \\
+1.61 & 1.23 & 48.81 \\
+1.72 & 1.37 & 50.18 \\
+1.81 & 1.49 & 52.11 \\
+1.96 & 1.69 & 57.59 \\
+2.12 & 1.89 & 64.18 \\
+2.24 & 2.04 & 67.75 \\
+2.39 & 2.24 & 72.14 \\
+2.48 & 2.36 & 75.16 \\
+2.60 & 2.51 & 78.72 \\
+2.75 & 2.71 & 83.39 \\
+2.87 & 2.85 & 86.68 \\
+\hline
+\end{tabular}
+\caption{Resultados obtenidos al probar el circuito}
+\label{tab:sensor_behavior}
+\end{table}
+
+% Aquí va:
+% - Tabla de valores reales vs digitalizados
+% - Gráficas comparativas
+% - Análisis del comportamiento en distintos niveles de humedad
+% - Cálculo del error
+
+\subsection{Análisis y discusión}
+% Aquí va:
+% - Interpretación de los resultados
+% - Limitaciones del diseño
+% - Diferencias entre teoría y práctica
+% - Posibles mejoras a futuro
+
+% --------------------- CONCLUSIONES ---------------------
+
+\section{Conclusiones}
+
+\subsection{Conclusión general}
+% Aquí va la conclusión del proyecto completo, evaluación del desempeño y logro de los objetivos.
+
+\subsection{Conclusiones individuales}
+% Aquí una conclusión por integrante:
+% - Qué aprendió
+% - Qué retos enfrentó
+% - Qué mejoraría
+
+\end{document}
